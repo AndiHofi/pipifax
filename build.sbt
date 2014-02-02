@@ -6,3 +6,5 @@ scalaVersion := "2.10.3"
 
 lazy val buildMonitor = project
 
+lazy val gpioControl = project
+

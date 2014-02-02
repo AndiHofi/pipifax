@@ -1,0 +1,6 @@
+{"Build": {
+    "name":"MyBuild",
+    "executions": [
+        {"execution": {"time":"2014-01-11T12:15:22", "result":"red"}},
+        {"execution":{"time":"2014-01-11T12:25:10", "result","green"}}]
+}}
