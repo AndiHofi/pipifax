@@ -1,0 +1,1 @@
+addSbtPlugin("org.pipifax" % "pidevelopment" % "0.1-SNAPSHOT")

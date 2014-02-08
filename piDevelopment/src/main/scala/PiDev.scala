@@ -1,3 +1,5 @@
+package org.pipifax.pidev
+
 
 import sbt._
 import sbt.Inc
@@ -11,7 +13,17 @@ import java.nio.file.attribute.{BasicFileAttributes}
 import java.nio.charset.Charset
 import complete.DefaultParsers._
 
-object PiDev extends Build {
+object PiDev extends Plugin {
+
+  lazy val piDevSettings = Seq (
+    piAbsoluteTargetDirectory,
+    mountPi,
+    umountPi,
+    umountPiTask,
+    isPiMounted,
+    piJarsToCopy
+  )
+
   lazy val piMountDirectory = settingKey[Path]("Directory where deployment target on the target RaspberryPi is mounted")
 
   lazy val piMountCommand = settingKey[Seq[String]]("Command to mount the RaspberryPi")

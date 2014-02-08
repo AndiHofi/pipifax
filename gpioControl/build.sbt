@@ -1,38 +1,31 @@
+
 import java.nio.file.Paths
+import org.pipifax.pidev.PiDev._
+
+
 
 name := "gpioControl"
 
 version := "0.1.1-SNAPSHOT"
 
-commands ++= Seq(PiDev.runJavah, PiDev.printState, PiDev.copyToPi)
-
 mainClass := Some("org.pipifax.gpio.GpioController")
 
-PiDev.piMountDirectory := Paths.get("/media/pipifax")
+piDevSettings
 
-PiDev.piMountCommand := Seq("/home/andi/pipifax")
+piMountDirectory := Paths.get("/media/pipifax")
 
-PiDev.piUmountCommand := Seq("fusermount", "-u", PiDev.piMountDirectory.value.toString)
+piMountCommand := Seq("/home/andi/pipifax")
 
-PiDev.piTargetDirectory := Paths.get("gpioControl")
+piUmountCommand := Seq("fusermount", "-u", piMountDirectory.value.toString)
 
-PiDev.nativeCode := Paths.get("native")
+piTargetDirectory := Paths.get("gpioControl")
 
-PiDev.compileCommand := "gcc -fPIC -c org_pipifax_gpio_GpioNative.cpp -I /usr/lib/jvm/java-7-openjdk-armhf/include"
+nativeCode := Paths.get("native")
 
-PiDev.linkCommand := "gcc org_pipifax_gpio_GpioNative.o -shared -o gpionative.so -WL,-soname,gpionative"
+compileCommand := "gcc -fPIC -c org_pipifax_gpio_GpioNative.cpp -I /usr/lib/jvm/java-7-openjdk-armhf/include"
 
-PiDev.piMainArgs := "native/gpionative.so"
+linkCommand := "gcc org_pipifax_gpio_GpioNative.o -shared -o gpionative.so -WL,-soname,gpionative"
 
-PiDev.isPiMounted
+piMainArgs := "native/gpionative.so"
 
-PiDev.mountPi
-
-PiDev.umountPi
-
-PiDev.umountPiTask
-
-PiDev.piJarsToCopy
-
-PiDev.piAbsoluteTargetDirectory
-
+umountPiTask
