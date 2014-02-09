@@ -8,20 +8,51 @@ import sbt.Task
 import sbt.Value
 import scala.Some
 import scala.util.{Try, Success, Failure}
+import scala.collection.JavaConverters._
 import java.nio.file._
 import java.nio.file.attribute.{BasicFileAttributes}
 import java.nio.charset.Charset
 import complete.DefaultParsers._
+import java.util.concurrent.atomic.AtomicReference
+import net.schmizz.sshj.SSHClient
+import org.pipifax.pidev.ssh.{SFTP, SSH}
+import org.slf4j.LoggerFactory
+import ch.qos.logback.classic.LoggerContext
+import ch.qos.logback.classic.joran.JoranConfigurator
 
-object PiDev extends Plugin {
+object PiDev extends Plugin { self =>
 
-  lazy val piDevSettings = Seq (
-    piAbsoluteTargetDirectory,
+  lazy val piDevSettings: Seq[Def.Setting[_]] = Seq (
+    piAbsoluteTargetDirectory := {
+      piMountDirectory.value.resolve(piTargetDirectory.value)
+    },
     mountPi,
     umountPi,
     umountPiTask,
     isPiMounted,
-    piJarsToCopy
+    piJarsToCopy,
+    sshTest,
+    sshAuthFile := None,
+    sshPiFingerprint := "",
+    sshConnection,
+
+    commands ++= Seq(runJavah, closeSSH, lsThere),
+    loggerConfigFile := Keys.baseDirectory.value.toPath.resolve("src/main/resources/logback.xml"),
+    configureLogging := resetLoggerConfiguration(loggerConfigFile.value),
+    (onLoad in Global) := {
+      val previous = (onLoad in Global).value
+      val config = loggerConfigFile.value
+      val reload: State => State = {state =>
+        resetLoggerConfiguration(config)
+        state
+      }
+      reload andThen previous
+    },
+    (onUnload in Global) := {
+      val previous = (onUnload in Global).value
+      closeSSHImpl andThen previous
+    }
+
   )
 
   lazy val piMountDirectory = settingKey[Path]("Directory where deployment target on the target RaspberryPi is mounted")
@@ -38,10 +69,14 @@ object PiDev extends Plugin {
   lazy val compileCommand = settingKey[String]("Command to compile native sources. Only executable on the Pi")
   lazy val linkCommand = settingKey[String]("Command to create the shared library. Only executable on the Pi")
   lazy val piMainArgs = settingKey[String]("Arguments to main class")
+  lazy val piRootMountPath = settingKey[String]("Root directory on the RaspberryPi that should be mounted")
 
-  lazy val piAbsoluteTargetDirectory = taskKey[Path]("Absolute path on mounted RaspberryPi where binaries should be stored") := {
-   piMountDirectory.value.resolve(piTargetDirectory.value)
-  }
+  lazy val piAbsoluteTargetDirectory = settingKey[Path]("Absolute path on mounted RaspberryPi where binaries should be stored")
+
+  lazy val loggerConfigFile = settingKey[Path]("Location of the logback config file")
+
+  lazy val configureLogging = taskKey[Unit]("Reconfigures logback using loggerConfigFile setting")
+
 
   lazy val isPiMounted = taskKey[Boolean]("Checks if RaspberryPi is mounted") :=
     PiDev.checkPiMounted(piMountDirectory.value).get
@@ -84,10 +119,20 @@ object PiDev extends Plugin {
     Process(command) ! logger
   }
 
+  def resetLoggerConfiguration(configFile: Path): Unit = {
+    if (Files.isRegularFile(configFile)) {
+      val loggerContext = LoggerFactory.getILoggerFactory().asInstanceOf[LoggerContext];
+      val loggerConfigurator = new JoranConfigurator()
+      loggerContext.reset()
+      loggerConfigurator.setContext(loggerContext)
+      loggerConfigurator.doConfigure(configFile.toString)
+    }
+  }
+
 
   def copyToPi = Command.command("copyToPi")(copyToPiAction)
 
-  val piJarsToCopy = taskKey[Seq[Path]]("Jar files to copy to the RaspberryPi. "
+  lazy val piJarsToCopy = taskKey[Seq[Path]]("Jar files to copy to the RaspberryPi. "
     +"Does not include native libraries to actually control GPIO ports") := {
 
       for (file <- (externalDependencyClasspath in Compile).value.files :+ (Keys.`package` in Compile).value)
@@ -95,14 +140,17 @@ object PiDev extends Plugin {
   }
 
 
-  def copyToPiAction(state: State): State = {
-    def eval[T](key: Def.ScopedKey[Task[T]]): (State, T) = {
-      Project.runTask(key, state) match {
-        case Some((state, Value(result))) => (state, result)
-        case Some((state, Inc(failure))) => throw failure
-        case None => throw new RuntimeException(s"Command $key not found")
-      }
+  def eval[T](state: State, key: Def.ScopedKey[Task[T]]): (State, T) = {
+    Project.runTask(key, state) match {
+      case Some((state, Value(result))) => (state, result)
+      case Some((state, Inc(failure))) => throw failure
+      case None => throw new RuntimeException(s"Command $key not found")
     }
+  }
+
+  def copyToPiAction(state: State): State = {
+    def eval[T](key: Def.ScopedKey[Task[T]]): (State, T) = self.eval(state, key)
+
     def evalSetting[T](key: SettingKey[T]): T = evaluateSetting(state, key)
 
     def flatEval[T](key: Def.ScopedKey[Task[T]]): T = eval(key)._2
@@ -111,7 +159,7 @@ object PiDev extends Plugin {
       flatEval(mountPi.key)
 
       val jarsToCopy = flatEval(piJarsToCopy.key)
-      val targetDir = flatEval(piAbsoluteTargetDirectory.key)
+      val targetDir = evalSetting(piAbsoluteTargetDirectory)
       val copyCount = copyFilesAction(state.log, jarsToCopy, targetDir)
       state.log.info(s"$copyCount of ${jarsToCopy.size} files copied to $targetDir")
 
@@ -303,5 +351,93 @@ object PiDev extends Plugin {
 
   def show[T](s: Seq[T]) =
     s.map("'" + _ + "'").mkString("[", ", ", "]")
+
+
+  val sshjConnection: AtomicReference[SSH] = new AtomicReference()
+  val sftpConnectionRef: AtomicReference[SFTP] = new AtomicReference()
+
+  lazy val sshTest = taskKey[Unit]("Test sshj") := {
+    sshjConnect()
+  }
+
+  lazy val sshHost = settingKey[String]("host name of the raspberry pi")
+
+  lazy val sshUser = settingKey[String]("User name to log in on the RaspberryPi")
+
+  lazy val sshAuthFile = settingKey[Option[Path]]("Path to ssh private key file, when not id_rsa or id_dsa can be used.")
+
+  lazy val sshPiFingerprint = settingKey[String]("Fingerprint of the ssh server on the RaspberryPi when local known_hosts file cannot be used")
+
+  lazy val sshConnection = taskKey[SSH]("Internally managed SSH connection to the Raspberry Pi") := {
+    val curConn: SSH = sshjConnection.get()
+    if (curConn != null && curConn.isConnected) curConn
+    else {
+      val newConn = SSH.connect(
+          hostName = sshHost.value,
+          userName =sshUser.value,
+          authenticationFile = sshAuthFile.value,
+          fingerPrint = sshPiFingerprint.value)
+
+      assume(sshjConnection.compareAndSet(null, newConn))
+      newConn
+    }
+  }
+
+  lazy val sftpConnection = taskKey[SFTP]("Internally managed SFTP connection to thre RaspberryPi") := {
+    val ssh = sshConnection.key.value
+    val sftp = sftpConnectionRef.get()
+    if (sftp != null && ssh.isConnected(sftp)) {
+      sftp
+    } else {
+      val newSftp = ssh.openSftp(piRootMountPath.value)
+      assume(sftpConnectionRef.compareAndSet(sftp, newSftp))
+      newSftp
+    }
+  }
+
+
+
+  def closeSSH = Command.command("closeSSH")(closeSSHImpl)
+
+
+  lazy val closeSSHImpl: State => State = { state =>
+    val sftp: SFTP = sftpConnectionRef.get()
+    if (sftp != null) {
+      sftp.close()
+      assume(sftpConnectionRef.compareAndSet(sftp, null))
+    }
+
+    val ssh: SSH = sshjConnection.get()
+    if (ssh != null) {
+      ssh.disconnect()
+
+      assume(sshjConnection.compareAndSet(ssh, null))
+    }
+    state
+  }
+
+  def lsThere = Command.command("lsThere") { state =>
+    val x = eval(state, sshConnection.key)
+    val succ = Try(x._2.execute("ls -l gpioControl/*"))
+
+    newState(x._1, succ)
+  }
+
+  def sshjConnect(): Unit = {
+    println("v1")
+    val ssh = new SSHClient()
+    ssh.loadKnownHosts(file("/home/andi/.ssh/known_hosts"))
+    ssh.addHostKeyVerifier("01:b7:6f:c9:14:b7:7b:30:7f:5c:82:55:4f:cb:24:6b")
+    ssh.connect("pipifax")
+    try {
+      ssh.authPublickey("pi", "/home/andi/.ssh/pi2_rsa");
+      using(ssh.newSFTPClient()) { ftp =>
+        val ls = ftp.ls("/")
+        ls.asScala.foreach(println _)
+      }
+    } finally {
+      ssh.disconnect()
+    }
+  }
 
 }
