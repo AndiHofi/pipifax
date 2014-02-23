@@ -14,7 +14,6 @@ object SFTP {
 }
 
 class SFTP (val client: SSH, sftpClient: SFTPClient, initCwd: String = "/") extends AnyRef with AutoCloseable {
-  override def close(): Unit = sftpClient.close()
   @volatile private var cwd: Path = Paths.get(initCwd)
 
   def ls: Seq[RemoteResourceInfo] = {
@@ -27,12 +26,19 @@ class SFTP (val client: SSH, sftpClient: SFTPClient, initCwd: String = "/") exte
     require(Files.isRegularFile(src))
 
     val transfer = sftpClient.getFileTransfer
-    transfer.upload(src.toString, cwd.resolve(dst).toString)
+    val target: String = dst
+    println(s"Copying $src to $target")
+    transfer.upload(src.toString, target)
   }
 
   def copyDirectoryTo(src: Path, dst: String = ".") = {
     require(Files.isDirectory(src))
-    sftpClient.getFileTransfer.upload(src.toString, cwd.resolve(dst).toString)
+    sftpClient.put(src.toString, cwd.resolve(dst).toString)
+  }
+
+  def copyDirectoryFrom(src: String, dst: Path) {
+    require(Files.isDirectory(dst))
+    sftpClient.getFileTransfer.download(cwd.resolve(src).toString, dst.toString)
   }
 
   def isLocalFileNewer(src: Path, dst: String) = {
@@ -42,4 +48,6 @@ class SFTP (val client: SSH, sftpClient: SFTPClient, initCwd: String = "/") exte
     val remoteLastModified = attributes.getMtime
     lastModified.toMillis > remoteLastModified
   }
+
+  override def close(): Unit = sftpClient.close()
 }

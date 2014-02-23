@@ -75,19 +75,19 @@ class TestUtils extends Spec {
   }
 
 
-}
+  class FailingTestClosable(x: Throwable) extends TestClosable {
+    override def close(): Unit = {
+      super.close()
+      throw x
+    }
+  }
 
-class FailingTestClosable(x: Throwable) extends TestClosable {
-  override def close(): Unit = {
-    super.close()
-    throw x
+  abstract class TestClosable extends Object with AutoCloseable {
+    var wasClosed: Boolean = false;
+
+    override def close(): Unit = {
+      wasClosed = true
+    }
   }
 }
 
-abstract class TestClosable extends Object with AutoCloseable {
-  var wasClosed: Boolean = false;
-
-  override def close(): Unit = {
-    wasClosed = true
-  }
-}

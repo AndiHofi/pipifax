@@ -19,6 +19,7 @@ import org.pipifax.pidev.ssh.{SFTP, SSH}
 import org.slf4j.LoggerFactory
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.joran.JoranConfigurator
+import org.pipifax.Utils.using
 
 object PiDev extends Plugin { self =>
 
@@ -327,27 +328,6 @@ object PiDev extends Plugin { self =>
       state
   }
 
-  def using[A <: AutoCloseable, B](resource: A)(f: A => B): B = {
-    if (resource eq null) throw new NullPointerException()
-
-    val result: B =
-      try {
-        f(resource)
-      } catch {
-        case th: Throwable =>
-          try {
-            resource.close()
-          } catch {
-            case onClose: Throwable =>
-              th.addSuppressed(onClose)
-          }
-          throw th
-      }
-
-    resource.close()
-
-    result
-  }
 
   def show[T](s: Seq[T]) =
     s.map("'" + _ + "'").mkString("[", ", ", "]")
@@ -386,7 +366,7 @@ object PiDev extends Plugin { self =>
   lazy val sftpConnection = taskKey[SFTP]("Internally managed SFTP connection to thre RaspberryPi") := {
     val ssh = sshConnection.key.value
     val sftp = sftpConnectionRef.get()
-    if (sftp != null && ssh.isConnected(sftp)) {
+    if (sftp != null && ssh.isFTPConnected(sftp)) {
       sftp
     } else {
       val newSftp = ssh.openSftp(piRootMountPath.value)
