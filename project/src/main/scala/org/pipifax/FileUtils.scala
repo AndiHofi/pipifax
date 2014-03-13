@@ -1,10 +1,8 @@
 package org.pipifax
 
 import java.nio.file.{StandardOpenOption, Files, Path}
-import org.pipifax.Utils._
+import Utils._
 import java.security.MessageDigest
-import java.nio.ByteBuffer
-import java.util.Formatter
 import scala.annotation.tailrec
 import org.bouncycastle.crypto.digests.SHA1Digest
 import java.math.BigInteger

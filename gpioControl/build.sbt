@@ -26,9 +26,9 @@ nativeCode := Paths.get("native")
 
 compileCommand := "gcc -fPIC -c org_pipifax_gpio_GpioNative.cpp -I /usr/lib/jvm/java-7-openjdk-armhf/include"
 
-linkCommand := "gcc org_pipifax_gpio_GpioNative.o -shared -o gpionative.so -WL,-soname,gpionative"
+linkCommand := "gcc org_pipifax_gpio_GpioNative.o bcm2835.o -shared -o gpionative.so -WL,-soname,gpionative"
 
-piMainArgs := "native/gpionative.so"
+piMainArgs := "native/gpionative.so $*"
 
 sshHost := "pipifax"
 

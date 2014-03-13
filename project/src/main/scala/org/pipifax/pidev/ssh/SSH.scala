@@ -1,7 +1,8 @@
 package org.pipifax.pidev.ssh
+
 import net.schmizz.sshj.SSHClient
 import java.nio.file._
-import net.schmizz.sshj.common.{IOUtils, StreamCopier}
+import net.schmizz.sshj.common.IOUtils
 import java.util.concurrent.TimeUnit
 
 object SSH {
@@ -40,7 +41,7 @@ object SSH {
 class SSH(private[ssh] val sshClient: SSHClient) extends AnyRef with AutoCloseable {
   def isConnected = sshClient.isConnected
 
-  def openSftp(rootDir: String = "~/") = SFTP(this, rootDir = rootDir)
+  def openSftp(rootDir: String = "/home/pi") = SFTP(this, rootDir = rootDir)
 
   def isFTPConnected(sftp: SFTP) = (sftp.client eq this) && sshClient.isConnected
 

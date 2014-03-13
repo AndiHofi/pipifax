@@ -2,9 +2,10 @@ package org.pipifax.pidev
 
 import org.scalatest.{BeforeAndAfter, Matchers, Spec}
 import Matchers._
-import org.pipifax.pidev.ssh.SSH
-import org.pipifax.Utils._
+import org.pipifax.Utils
+import Utils._
 import java.nio.file.{Path, Files, Paths}
+import org.pipifax.pidev.ssh.SSH
 
 
 class SshjTest extends Spec with BeforeAndAfter {

@@ -1,8 +1,9 @@
 package org.pipifax.pidev.ssh
 
-import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
+import net.schmizz.sshj.sftp.{FileAttributes, RemoteResourceInfo, SFTPClient}
 import scala.collection.JavaConverters._
 import java.nio.file.{Paths, Files, Path}
+import org.pipifax.Utils._
 
 object SFTP {
   private[ssh] def apply(client: SSH, rootDir: String = "~/"): SFTP = {
@@ -13,14 +14,8 @@ object SFTP {
   }
 }
 
-class SFTP (val client: SSH, sftpClient: SFTPClient, initCwd: String = "/") extends AnyRef with AutoCloseable {
-  @volatile private var cwd: Path = Paths.get(initCwd)
+class SFTP(val client: SSH, val sftpClient: SFTPClient, initCwd: String = "/") extends AnyRef with AutoCloseable {
 
-  def ls: Seq[RemoteResourceInfo] = {
-    val jlist = sftpClient.ls(cwd.toString)
-
-    jlist.asScala
-  }
 
   def copyFileTo(src: Path, dst: String = "."): Unit = {
     require(Files.isRegularFile(src))
@@ -29,20 +24,23 @@ class SFTP (val client: SSH, sftpClient: SFTPClient, initCwd: String = "/") exte
     val target: String = dst
     println(s"Copying $src to $target")
     transfer.upload(src.toString, target)
+//    sftpClient.setattr(target, FileAttributes.EMPTY)
   }
 
   def copyDirectoryTo(src: Path, dst: String = ".") = {
     require(Files.isDirectory(src))
-    sftpClient.put(src.toString, cwd.resolve(dst).toString)
+    println(s"Uploading directory $src to ${ dst }")
+    Thread.sleep(5000)
+    sftpClient.put(src.toString, dst)
   }
 
   def copyDirectoryFrom(src: String, dst: Path) {
     require(Files.isDirectory(dst))
-    sftpClient.getFileTransfer.download(cwd.resolve(src).toString, dst.toString)
+    sftpClient.getFileTransfer.download(src, dst.toString)
   }
 
   def isLocalFileNewer(src: Path, dst: String) = {
-    val attributes = sftpClient.lstat(cwd.resolve(dst).toString)
+    val attributes = sftpClient.lstat(dst)
     val lastModified = Files.getLastModifiedTime(src)
 
     val remoteLastModified = attributes.getMtime

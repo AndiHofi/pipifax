@@ -10,17 +10,17 @@ extern "C" {
 /*
  * Class:     org_pipifax_gpio_GpioNative
  * Method:    init
- * Signature: (Z)I
+ * Signature: (Z)Z
  */
-JNIEXPORT jint JNICALL Java_org_pipifax_gpio_GpioNative_init__Z
+JNIEXPORT jboolean JNICALL Java_org_pipifax_gpio_GpioNative_init__Z
   (JNIEnv *, jobject, jboolean);
 
 /*
  * Class:     org_pipifax_gpio_GpioNative
  * Method:    init
- * Signature: ()I
+ * Signature: ()Z
  */
-JNIEXPORT jint JNICALL Java_org_pipifax_gpio_GpioNative_init__
+JNIEXPORT jboolean JNICALL Java_org_pipifax_gpio_GpioNative_init__
   (JNIEnv *, jobject);
 
 /*
@@ -33,10 +33,42 @@ JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeDigital
 
 /*
  * Class:     org_pipifax_gpio_GpioNative
- * Method:    close
- * Signature: ()I
+ * Method:    setPWMParams
+ * Signature: (II)V
  */
-JNIEXPORT jint JNICALL Java_org_pipifax_gpio_GpioNative_close
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_setPWMParams
+  (JNIEnv *, jobject, jint, jint);
+
+/*
+ * Class:     org_pipifax_gpio_GpioNative
+ * Method:    writeAnalog
+ * Signature: (IF)V
+ */
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeAnalog
+  (JNIEnv *, jobject, jint, jfloat);
+
+/*
+ * Class:     org_pipifax_gpio_GpioNative
+ * Method:    writeBlink
+ * Signature: (II)V
+ */
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeBlink
+  (JNIEnv *, jobject, jint, jint);
+
+/*
+ * Class:     org_pipifax_gpio_GpioNative
+ * Method:    writeWobble
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeWobble
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_pipifax_gpio_GpioNative
+ * Method:    close
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_pipifax_gpio_GpioNative_close
   (JNIEnv *, jobject);
 
 /*
@@ -54,6 +86,14 @@ JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_gpioFsel
  */
 JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_gpioWriteMulti
   (JNIEnv *, jobject, jint, jint);
+
+/*
+ * Class:     org_pipifax_gpio_GpioNative
+ * Method:    initPinMap
+ * Signature: ([B)V
+ */
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_initPinMap
+  (JNIEnv *, jobject, jbyteArray);
 
 #ifdef __cplusplus
 }
