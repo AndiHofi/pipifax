@@ -9,19 +9,27 @@ extern "C" {
 #endif
 /*
  * Class:     org_pipifax_gpio_GpioNative
- * Method:    init
- * Signature: (Z)Z
+ * Method:    initPinMap
+ * Signature: ([B)V
  */
-JNIEXPORT jboolean JNICALL Java_org_pipifax_gpio_GpioNative_init__Z
-  (JNIEnv *, jobject, jboolean);
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_initPinMap
+  (JNIEnv *, jobject, jbyteArray);
 
 /*
  * Class:     org_pipifax_gpio_GpioNative
  * Method:    init
- * Signature: ()Z
+ * Signature: (Z)Z
  */
-JNIEXPORT jboolean JNICALL Java_org_pipifax_gpio_GpioNative_init__
-  (JNIEnv *, jobject);
+JNIEXPORT jboolean JNICALL Java_org_pipifax_gpio_GpioNative_init
+  (JNIEnv *, jobject, jboolean);
+
+/*
+ * Class:     org_pipifax_gpio_GpioNative
+ * Method:    enableOutput
+ * Signature: (IZ)V
+ */
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_enableOutput
+  (JNIEnv *, jobject, jint, jboolean);
 
 /*
  * Class:     org_pipifax_gpio_GpioNative
@@ -33,35 +41,19 @@ JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeDigital
 
 /*
  * Class:     org_pipifax_gpio_GpioNative
- * Method:    setPWMParams
- * Signature: (II)V
+ * Method:    createProgram
+ * Signature: ([I)I
  */
-JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_setPWMParams
-  (JNIEnv *, jobject, jint, jint);
+JNIEXPORT jint JNICALL Java_org_pipifax_gpio_GpioNative_createProgram
+  (JNIEnv *, jobject, jintArray);
 
 /*
  * Class:     org_pipifax_gpio_GpioNative
- * Method:    writeAnalog
- * Signature: (IF)V
+ * Method:    setProgram
+ * Signature: ([II)V
  */
-JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeAnalog
-  (JNIEnv *, jobject, jint, jfloat);
-
-/*
- * Class:     org_pipifax_gpio_GpioNative
- * Method:    writeBlink
- * Signature: (II)V
- */
-JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeBlink
-  (JNIEnv *, jobject, jint, jint);
-
-/*
- * Class:     org_pipifax_gpio_GpioNative
- * Method:    writeWobble
- * Signature: (I)V
- */
-JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeWobble
-  (JNIEnv *, jobject, jint);
+JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_setProgram
+  (JNIEnv *, jobject, jintArray, jint);
 
 /*
  * Class:     org_pipifax_gpio_GpioNative
@@ -70,30 +62,6 @@ JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_writeWobble
  */
 JNIEXPORT jboolean JNICALL Java_org_pipifax_gpio_GpioNative_close
   (JNIEnv *, jobject);
-
-/*
- * Class:     org_pipifax_gpio_GpioNative
- * Method:    gpioFsel
- * Signature: (II)V
- */
-JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_gpioFsel
-  (JNIEnv *, jobject, jint, jint);
-
-/*
- * Class:     org_pipifax_gpio_GpioNative
- * Method:    gpioWriteMulti
- * Signature: (II)V
- */
-JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_gpioWriteMulti
-  (JNIEnv *, jobject, jint, jint);
-
-/*
- * Class:     org_pipifax_gpio_GpioNative
- * Method:    initPinMap
- * Signature: ([B)V
- */
-JNIEXPORT void JNICALL Java_org_pipifax_gpio_GpioNative_initPinMap
-  (JNIEnv *, jobject, jbyteArray);
 
 #ifdef __cplusplus
 }
